@@ -3,7 +3,7 @@ name: Playwright UI Tests
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
 
 permissions:
