@@ -1,0 +1,77 @@
+name: Playwright UI Tests
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ui-tests:
+    name: Build app and run external UI tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout fake-shop
+        uses: actions/checkout@v5
+
+      # If the tests repository is private, add PLAYWRIGHT_TESTS_REPO_TOKEN as
+      # a read-only repository secret. Public test repos can use github.token.
+      - name: Checkout Playwright tests
+        uses: actions/checkout@v5
+        with:
+          repository: Yath27/fake-shop-playwright-tests
+          ref: main
+          path: playwright-tests
+          token: ${{ secrets.PLAYWRIGHT_TESTS_REPO_TOKEN || github.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Install pnpm
+        run: |
+          npm install --global pnpm@11.0.9
+          pnpm --version
+
+      - name: Install fake-shop dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build fake-shop
+        run: pnpm run build
+
+      - name: Install Playwright project dependencies
+        working-directory: playwright-tests
+        run: npm ci
+
+      - name: Install Chromium and system dependencies
+        working-directory: playwright-tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Start fake-shop and run UI tests
+        shell: bash
+        run: |
+          pnpm start > fake-shop.log 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:3000/ > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          if ! curl --fail --silent http://localhost:3000/ > /dev/null; then
+            cat fake-shop.log
+            exit 1
+          fi
+
+          cd playwright-tests
+          npm test
