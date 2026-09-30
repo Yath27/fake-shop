@@ -1,17 +1,18 @@
 name: Playwright UI Tests
 
 on:
-  push:
-    branches:
-      - "**"
-  pull_request:
+  deployment_status:
 
 permissions:
   contents: read
 
 jobs:
   ui-tests:
-    name: Build app and run external UI tests
+    name: Run external UI tests on preview
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment != 'Production' &&
+      github.event.deployment_status.target_url != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -19,32 +20,19 @@ jobs:
       - name: Checkout fake-shop
         uses: actions/checkout@v5
 
-      # If the tests repository is private, add PLAYWRIGHT_TESTS_REPO_TOKEN as
-      # a read-only repository secret. Public test repos can use github.token.
-      - name: Checkout Playwright tests
-        uses: actions/checkout@v5
-        with:
-          repository: Yath27/fake-shop-playwright-tests
-          ref: main
-          path: playwright-tests
-          token: ${{ secrets.PLAYWRIGHT_TESTS_REPO_TOKEN || github.token }}
-
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
 
-      - name: Install pnpm
-        run: |
-          npm install --global pnpm@11.0.9
-          pnpm --version
-
-      - name: Install fake-shop dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build fake-shop
-        run: pnpm run build
+      - name: Checkout Playwright tests
+        uses: actions/checkout@v5
+        with:
+          repository: Yath27/fake-shop-playwright-tests
+          ref: main
+          path: playwright-tests
+          token: ${{ secrets.PLAYWRIGHT_TESTS_REPO_TOKEN }}
 
       - name: Install Playwright project dependencies
         working-directory: playwright-tests
@@ -54,24 +42,28 @@ jobs:
         working-directory: playwright-tests
         run: npx playwright install --with-deps chromium
 
-      - name: Start fake-shop and run UI tests
+      - name: Wait for preview and run UI tests
         shell: bash
         run: |
-          pnpm start > fake-shop.log 2>&1 &
-          app_pid=$!
-          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          bypass_header=()
+          if [[ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]]; then
+            bypass_header+=(--header "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET")
+          fi
 
           for attempt in {1..30}; do
-            if curl --fail --silent http://localhost:3000/ > /dev/null; then
+            if curl --fail --silent "${bypass_header[@]}" "$BASE_URL/api/health" > /dev/null; then
               break
             fi
             sleep 2
           done
 
-          if ! curl --fail --silent http://localhost:3000/ > /dev/null; then
-            cat fake-shop.log
+          if ! curl --fail --silent "${bypass_header[@]}" "$BASE_URL/api/health" > /dev/null; then
+            echo "Vercel preview did not become healthy: $BASE_URL"
             exit 1
           fi
 
           cd playwright-tests
           npm test
+        env:
+          BASE_URL: ${{ github.event.deployment_status.target_url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
