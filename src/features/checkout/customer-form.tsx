@@ -169,7 +169,7 @@ export function CustomerForm({ initialValues = emptyValues, onSubmit }: Customer
         <FieldError>{error}</FieldError>
       </FieldGroup>
 
-      <Button type="submit">Prepare checkout</Button>
+      <Button type="button">Prepare checkout</Button>
     </form>
   );
 }
