@@ -8,10 +8,11 @@ permissions:
 
 jobs:
   ui-tests:
-    name: Run external UI tests on preview
+    name: Run external UI tests against deployment
     if: >-
       github.event.deployment_status.state == 'success' &&
-      github.event.deployment.environment != 'Production' &&
+      (github.event.deployment.environment == 'Preview' ||
+       github.event.deployment.environment == 'Production') &&
       github.event.deployment_status.target_url != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -42,7 +43,7 @@ jobs:
         working-directory: playwright-tests
         run: npx playwright install --with-deps chromium
 
-      - name: Wait for preview and run UI tests
+      - name: Wait for deployment and run UI tests
         shell: bash
         run: |
           bypass_header=()
@@ -58,7 +59,7 @@ jobs:
           done
 
           if ! curl --fail --silent "${bypass_header[@]}" "$BASE_URL/api/health" > /dev/null; then
-            echo "Vercel preview did not become healthy: $BASE_URL"
+            echo "Vercel deployment did not become healthy: $BASE_URL"
             exit 1
           fi
 
