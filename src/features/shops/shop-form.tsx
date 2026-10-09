@@ -136,10 +136,7 @@ export function ShopForm({ initialShop, onCancel, onSubmit, submitLabel }: ShopF
       </FieldGroup>
 
       <div className="flex flex-wrap gap-3">
-        <Button
-          onClick={(event) => event.currentTarget.form?.requestSubmit()}
-          type="button"
-        >
+        <Button onClick={(event) => event.currentTarget.form?.requestSubmit()} type="button">
           {submitLabel}
         </Button>
         {onCancel ? (
