@@ -63,3 +63,21 @@ Run route smoke validation while the application is running:
 ```bash
 pnpm run smoke:routes
 ```
+
+## GitHub Actions Preview UI Tests
+
+Vercel's GitHub integration deploys branch commits as Preview deployments. When a non-production
+deployment reports success, the Playwright workflow runs the private `fake-shop-playwright-tests`
+suite against the deployment URL from the GitHub deployment event. The test repository's Playwright
+configuration should read `BASE_URL` as its `baseURL`, with `http://localhost:3000` as the local
+default.
+
+Configure the Vercel GitHub App to access `fake-shop` and set `main` as its production branch.
+Configure this repository Actions secret:
+
+- `PLAYWRIGHT_TESTS_REPO_TOKEN` (read access to `fake-shop-playwright-tests`)
+
+If preview protection is enabled, add the Vercel Protection Bypass for Automation value to this
+repository as `VERCEL_AUTOMATION_BYPASS_SECRET`, and configure the test repository's Playwright
+`use.extraHTTPHeaders` with `x-vercel-protection-bypass` from that environment variable. QA can
+access previews through Vercel or a Vercel shareable link without access to the app source repo.
