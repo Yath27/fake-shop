@@ -69,7 +69,7 @@ export function ShopForm({ initialShop, onCancel, onSubmit, submitLabel }: ShopF
             <Input
               id={`${fieldId}-name`}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Demo storefront"
+              placeholder="Shop name"
               value={name}
             />
             <FieldError>{error}</FieldError>
