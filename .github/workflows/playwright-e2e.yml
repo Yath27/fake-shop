@@ -13,7 +13,7 @@ jobs:
       github.event.deployment_status.state == 'success' &&
       (github.event.deployment.environment == 'Preview' ||
        github.event.deployment.environment == 'Production') &&
-      github.event.deployment_status.target_url != ''
+      github.event.deployment.environment_url != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -66,5 +66,5 @@ jobs:
           cd playwright-tests
           npm test
         env:
-          BASE_URL: ${{ github.event.deployment_status.target_url }}
+          BASE_URL: ${{ github.event.deployment.environment_url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
