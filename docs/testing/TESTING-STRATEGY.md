@@ -81,3 +81,9 @@ If preview protection is enabled, add the Vercel Protection Bypass for Automatio
 repository as `VERCEL_AUTOMATION_BYPASS_SECRET`, and configure the test repository's Playwright
 `use.extraHTTPHeaders` with `x-vercel-protection-bypass` from that environment variable. QA can
 access previews through Vercel or a Vercel shareable link without access to the app source repo.
+
+After Preview UI tests pass, the workflow waits for `CI` to pass on the same commit and merges the
+matching open pull request into `main`. Vercel then creates the Production deployment from `main`.
+The Production deployment runs the UI tests but does not trigger another merge. The merge job uses
+the workflow token with Actions read, Contents write, and Pull requests write permissions; GitHub
+branch protection and review requirements still apply.
